@@ -429,7 +429,8 @@
                 filterClearBtn: '<span class="input-group-btn"><button class="btn btn-default multiselect-clear-filter" type="button"><i class="glyphicon glyphicon-remove-circle"></i></button></span>',
                 li: '<li><a tabindex="0"><label></label></a></li>',
                 divider: '<li class="multiselect-item divider"></li>',
-                liGroup: '<li class="multiselect-item multiselect-group"><label></label></li>'
+                liGroup: '<li class="multiselect-item multiselect-group"><label></label></li>',
+                nomatches: '<li class="no-items">No matches found</li>'
             }
         },
 
@@ -530,7 +531,7 @@
 
             this.$select.children().each($.proxy(function(index, element) {
 
-                var $element = $(element);
+                var $element = $(element), showElement = true;
                 // Support optgroups and options without a group simultaneously.
                 var tag = $element.prop('tagName')
                     .toLowerCase();
@@ -538,6 +539,10 @@
                 if ($element.prop('value') === this.options.selectAllValue) {
                     return;
                 }
+                if(index < this.options.maxItems)
+                    showElement = true;
+                else
+                    showElement = false;
 
                 if (tag === 'optgroup') {
                     this.createOptgroup(element);
@@ -548,7 +553,7 @@
                         this.createDivider();
                     }
                     else {
-                        this.createOptionValue(element);
+                        this.createOptionValue(element, showElement);
                     }
 
                 }
@@ -838,7 +843,7 @@
          *
          * @param {jQuery} element
          */
-        createOptionValue: function(element) {
+        createOptionValue: function(element, showElement) {
             var $element = $(element);
             if ($element.is(':selected')) {
                 $element.prop('selected', true);
@@ -854,6 +859,8 @@
             var $label = $('label', $li);
             $label.addClass(inputType);
             $li.addClass(classes);
+
+            if(!showElement && this.options.maxItems) $li.addClass('multiselect-filter-hidden', true).hide();
 
             if (this.options.enableHTML) {
                 $label.html(" " + label);
@@ -1051,7 +1058,9 @@
                             if (this.query !== event.target.value) {
                                 this.query = event.target.value;
 
-                                var currentGroup, currentGroupVisible;
+                               $('li.no-items', this.$ul).remove();
+
+                                var currentGroup, currentGroupVisible, shownCount = 0;
                                 $.each($('li', this.$ul), $.proxy(function(index, element) {
                                     var value = $('input', element).length > 0 ? $('input', element).val() : "";
                                     var text = $('label', element).text();
@@ -1088,6 +1097,10 @@
                                             showElement = true;
                                         }
 
+                                        if(showElement) shownCount++;
+                                        if(shownCount > this.options.maxItems)
+                                            showElement = false;
+
                                         // Toggle current element (group or group item) according to showElement boolean.
                                         $(element).toggle(showElement)
                                             .toggleClass('multiselect-filter-hidden', !showElement);
@@ -1113,6 +1126,9 @@
                                         }
                                     }
                                 }, this));
+
+                                if($('li', this.$ul).not('.multiselect-filter-hidden,.multiselect-filter').length == 0)
+                                    this.$ul.append(this.options.templates.nomatches);
                             }
 
                             this.updateSelectAll();
